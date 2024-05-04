@@ -1,14 +1,12 @@
 import mimetypes
-import json
-import socket
 import logging
 from pathlib import Path
 from urllib.parse import urlparse, unquote_plus
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from threading import Thread
-from datetime import datetime
-
+from multiprocessing import Process
 from pymongo import MongoClient
+import socket
+from datetime import datetime
 
 URI_DB = "mongodb://mongodb:27017"
 BASE_DIR = Path(__file__).parent
@@ -37,7 +35,6 @@ class Framework(BaseHTTPRequestHandler):
     def do_POST(self):
         size = int(self.headers["Content-Length"])
         data = self.rfile.read(size)
-
         try:
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             client_socket.sendto(data, (SOCKET_HOST, SOCKET_PORT))
@@ -110,5 +107,11 @@ def run_socket_server():
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(threadName)s - %(message)s")
-    Thread(target=run_http_server, name="HTTP_Server").start()
-    Thread(target=run_socket_server, name="SOCKET_Server").start()
+    http_server_process = Process(target=run_http_server, name="HTTP_Server")
+    socket_server_process = Process(target=run_socket_server, name="SOCKET_Server")
+
+    http_server_process.start()
+    socket_server_process.start()
+
+    http_server_process.join()
+    socket_server_process.join()
